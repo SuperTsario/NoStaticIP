@@ -13,9 +13,9 @@ def create_config(server, port, login, password, frequency, method, ip_server):
     config.set("INFO", "port", str(port))
     config.set("INFO", "login", login)
     config.set("INFO", "password", password)
-    config.set("INFO", "frequency", frequency)
-    config.set("INFO", "method", method)
-    config.set("INFO", "ip_server", ip_server)
+    config.set("INFO", "frequency", str(frequency))
+    config.set("INFO", "method", str(method))
+    config.set("INFO", "ip_server", str(ip_server))
     with open('config.ini', 'w') as config_file:
         config.write(config_file)
 
@@ -31,19 +31,25 @@ def load_config():
     ip_server = config.get("INFO", "ip_server")
     return server, port, login, password, int(frequency), int(method), int(ip_server)
 
-def get_ip():
+def get_ip_by_server():
     conn = http.client.HTTPConnection("ifconfig.me")
     conn.request("GET", "/ip")
     return conn.getresponse().read().decode()
 
-def get_ip_stun():
+def get_ip_by_stun():
     info = get_ip_info()
     return info[1]
+
+def get_ip(method):
+    if method == 0:
+        return get_ip_by_server()
+    else:
+        return get_ip_by_stun()
 
 def send_mail(ip, server, port, login, password):
     connection = smtplib.SMTP_SSL(server, port)
     connection.login(login, password)
-    connection.send_message(create_message(ip))
+    connection.send_message(create_message(ip, login))
     connection.quit()
 
 def create_message(ip, login):
