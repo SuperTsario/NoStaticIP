@@ -6,6 +6,21 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from stun import get_ip_info
 
+def create_save_file(ip):
+    file = open("save", "w")
+    file.write(ip)
+    file.close()
+
+def load_save_file():
+    try:
+        file = open("save", "r")
+        ip = file.read()
+        file.close()
+        return ip
+    except:
+        return "0.0.0.0"
+    
+
 def create_config(server, port, login, password, frequency, method, ip_server):
     config = configparser.ConfigParser()
     config.add_section("INFO")

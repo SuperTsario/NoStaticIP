@@ -1,22 +1,31 @@
+import sys
+from re import fullmatch
+import asyncio
+
 from PyQt6.QtWidgets import QApplication, QWidget, QMainWindow, QPushButton, QMenuBar, QLineEdit, QLabel, QComboBox, QVBoxLayout, QHBoxLayout, QGridLayout, QMessageBox
 from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtGui import QAction
-from re import fullmatch
+
 from main import *
-import sys
 
-app = QApplication([])
-
+# инициализация глобальных переменных и констант
 try:
     smtp_server, port, email, password, frequency, method, server_ip = load_config()
 except:
     smtp_server, port, email, password, frequency, method, server_ip = None, "465", None, None, 1, 0, 0
 
-times = {0: 60, 1: 300, 2: 600, 3: 1800, 4: 3600}
-time = times[frequency]
+TIMES = {0: 60, 1: 300, 2: 600, 3: 1800, 4: 3600}
+time = TIMES[frequency]
+
+last_sent_ip = load_save_file()
+
+do = False
+
+# приложение
+app = QApplication([])
 
 class MainWindow(QMainWindow):
-    def __init__(self, ip, last_ip):
+    def __init__(self, last_ip):
         super().__init__()
         self.setWindowTitle("NoStaticIP")
         self.setMinimumSize(300, 200)
@@ -37,8 +46,12 @@ class MainWindow(QMainWindow):
         self.check_ip_button.clicked.connect(self.check_ip)
         self.last_sent_ip = QLabel(f"Последний отправленный IP:\n{last_ip}")
         self.send_ip_button = QPushButton("Отправить IP")
+        self.send_ip_button.clicked.connect(self.send_ip)
         
         self.start = QPushButton("Начать")
+        self.start.setCheckable(True)
+        self.start.clicked.connect(self.start_cycle)
+        self.start.released.connect(self.stop_cycle)
 
         layout.addWidget(self.current_ip_label)
         layout.addWidget(self.check_ip_button)
@@ -54,6 +67,14 @@ class MainWindow(QMainWindow):
         global method
         self.current_ip_label.setText(f"Ваш IP сейчас:\n{get_ip(method)}")
 
+    def send_ip(self):
+        global smtp_server, port, email, password, method, server_ip, last_sent_ip
+        ip_to_send = get_ip(method)
+        send_mail(ip_to_send, smtp_server, int(port), email, password)
+        last_sent_ip = ip_to_send
+        self.last_sent_ip.setText(f"Последний отправленный IP:\n{last_sent_ip}")
+        create_save_file(last_sent_ip)
+
     def settings_window(self):
         global email, password, smtp_server, port, frequency, method, server_ip
         self.sw = SettingsWindow(email, password, smtp_server, str(port), frequency, method, server_ip)
@@ -62,6 +83,14 @@ class MainWindow(QMainWindow):
     def info_window(self):
         self.iw = InfoWindow()
         self.iw.show()
+
+    def start_cycle(self):
+        global do
+        do = True
+
+    def stop_cycle(self):
+        global do
+        do = False
 
 
 
@@ -205,9 +234,9 @@ class SettingsWindow(QWidget):
         port = int(self.port_chose.currentText())
 
     def time_changed(self):
-        global frequency, time, times
+        global frequency, time, TIMES
         frequency = self.check_frequency.currentIndex()
-        time = times[frequency]
+        time = TIMES[frequency]
 
     def method_changed(self):
         global method
@@ -231,7 +260,7 @@ class InfoWindow(QWidget):
         info_layout.addWidget(self.info)
         self.setLayout(info_layout)
 
-    
-window = MainWindow("127.0.0.1", "127.0.0.1")
+
+window = MainWindow(last_sent_ip)
 window.show()
 app.exec()
