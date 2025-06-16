@@ -5,51 +5,57 @@ from time import sleep
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from stun import get_ip_info
+import socket
+import ssl
 
-def create_save_file(ip):
+def create_save_file(ip, email, server):
     file = open("save", "w")
-    file.write(ip)
+    file.write(f"{ip}\n{email}\n{server}")
     file.close()
 
 def load_save_file():
     try:
         file = open("save", "r")
-        ip = file.read()
+        save = file.readlines()
         file.close()
-        return ip
+        return save[0], save[1], save[2]
     except:
-        return "0.0.0.0"
+        return "0.0.0.0", "example@example.com", "smtp.example.com"
     
 
 def create_config(server, port, login, password, frequency, method, ip_server):
     config = configparser.ConfigParser()
-    config.add_section("INFO")
-    config.set("INFO", "server", server)
-    config.set("INFO", "port", str(port))
-    config.set("INFO", "login", login)
-    config.set("INFO", "password", password)
-    config.set("INFO", "frequency", str(frequency))
-    config.set("INFO", "method", str(method))
-    config.set("INFO", "ip_server", str(ip_server))
-    with open('config.ini', 'w') as config_file:
+    config.add_section("ACCOUNT")
+    config.add_section("SETTINGS")
+    config.set("ACCOUNT", "server", server)
+    config.set("ACCOUNT", "port", str(port))
+    config.set("ACCOUNT", "login", login)
+    config.set("ACCOUNT", "password", password)
+    config.set("SETTINGS", "frequency", str(frequency))
+    config.set("SETTINGS", "method", str(method))
+    config.set("SETTINGS", "ip_server", str(ip_server))
+    with open('config.ini', "w") as config_file:
         config.write(config_file)
 
 def load_config():
     config = configparser.ConfigParser()
     config.read("config.ini")
-    server = config.get("INFO", "server")
-    port = config.get("INFO", "port")
-    login = config.get("INFO", "login")
-    password = config.get("INFO", "password")
-    frequency = config.get("INFO", "frequency")
-    method = config.get("INFO", "method")
-    ip_server = config.get("INFO", "ip_server")
+    server = config.get("ACCOUNT", "server")
+    port = config.get("ACCOUNT", "port")
+    login = config.get("ACCOUNT", "login")
+    password = config.get("ACCOUNT", "password")
+    frequency = config.get("SETTINGS", "frequency")
+    method = config.get("SETTINGS", "method")
+    ip_server = config.get("SETTINGS", "ip_server")
     return server, port, login, password, int(frequency), int(method), int(ip_server)
 
 def get_ip_by_server():
-    conn = http.client.HTTPConnection("ifconfig.me")
-    conn.request("GET", "/ip")
-    return conn.getresponse().read().decode()
+    try:
+        conn = http.client.HTTPConnection("ifconfig.me")
+        conn.request("GET", "/ip")
+        return conn.getresponse().read().decode()
+    except:
+        return None
 
 def get_ip_by_stun():
     info = get_ip_info()
