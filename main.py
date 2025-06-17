@@ -1,12 +1,12 @@
 import smtplib
 import http.client
 import configparser
-from time import sleep
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from stun import get_ip_info
-import socket
-import ssl
+from socket import gaierror
+from ssl import SSLError
+from re import fullmatch
 
 def create_save_file(ip, email, server):
     file = open("save", "w")
@@ -79,3 +79,10 @@ def create_message(ip, login):
     html = f"""<html><body><p>Ваш IP сейчас: {ip}</p></body></html>"""
     message.attach(MIMEText(html, "html"))
     return message
+
+def validate_email(email):
+    EMAIL_PATTERN = r"^\S+@\S+\.\S+$"
+    if fullmatch(EMAIL_PATTERN, email) is None:
+        return False
+    else:
+        return True
