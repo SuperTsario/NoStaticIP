@@ -7,15 +7,26 @@ from stun import get_ip_info
 from socket import gaierror
 from ssl import SSLError
 from re import fullmatch
+from os import remove, path, getenv, makedirs
+
+BASEDIR = path.dirname(__file__)
+APPDATADIR = path.join(getenv('APPDATA'), "STFG", "NoStaticIP")
+if not(path.exists(APPDATADIR)):
+    makedirs(APPDATADIR)
+CONFIG_FILE = path.join(APPDATADIR, "config.ini")
+LOGO = path.join(BASEDIR, "logo.png")
+SAVE_FILE = path.join(APPDATADIR, "save")
+FIRST_START_DIR = path.join(APPDATADIR, "firststart")
+IS_FIRST_START = not(path.exists(FIRST_START_DIR))
 
 def create_save_file(ip, email, server):
-    file = open("save", "w")
+    file = open(SAVE_FILE, "w")
     file.write(f"{ip}\n{email}\n{server}")
     file.close()
 
 def load_save_file():
     try:
-        file = open("save", "r")
+        file = open(SAVE_FILE, "r")
         save = file.readlines()
         file.close()
         return save[0], save[1], save[2]
@@ -24,6 +35,7 @@ def load_save_file():
     
 
 def create_config(server, port, login, password, frequency, method, ip_server):
+    global CONFIG_FILE
     config = configparser.ConfigParser()
     config.add_section("ACCOUNT")
     config.add_section("SETTINGS")
@@ -34,12 +46,12 @@ def create_config(server, port, login, password, frequency, method, ip_server):
     config.set("SETTINGS", "frequency", str(frequency))
     config.set("SETTINGS", "method", str(method))
     config.set("SETTINGS", "ip_server", str(ip_server))
-    with open('config.ini', "w") as config_file:
+    with open(CONFIG_FILE, "w") as config_file:
         config.write(config_file)
 
 def load_config():
     config = configparser.ConfigParser()
-    config.read("config.ini")
+    config.read(CONFIG_FILE)
     server = config.get("ACCOUNT", "server")
     port = config.get("ACCOUNT", "port")
     login = config.get("ACCOUNT", "login")

@@ -1,5 +1,4 @@
 import sys
-from os import remove, path
 from time import sleep
 
 from PyQt6.QtWidgets import QApplication, QWidget, QMainWindow, QPushButton, QMenuBar, QLineEdit, QLabel, QComboBox, QVBoxLayout, QHBoxLayout, QGridLayout, QMessageBox
@@ -8,11 +7,11 @@ from PyQt6.QtGui import QAction, QIcon
 
 from main import *
 
-basedir = path.dirname(__file__)
-logo = "logo.png"
+VERSION = "1.0.0"
+BUILD = "0010"
 
 try:
-    from ctypes import windll  # Only exists on Windows.
+    from ctypes import windll
     myappid = 'STFG.NoStaticIP.Server.1'
     windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 except ImportError:
@@ -47,7 +46,7 @@ cycle = False
 
 # приложение
 app = QApplication([])
-app.setWindowIcon(QIcon(logo))
+app.setWindowIcon(QIcon(LOGO))
 
 class CycleThread(QThread):
     error_signal = pyqtSignal(int)
@@ -92,7 +91,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("NoStaticIP")
         self.setMinimumSize(320, 240)
         self.setMaximumSize(420, 340)
-        self.setWindowIcon(QIcon(logo))
+        self.setWindowIcon(QIcon(LOGO))
 
         self.menu_bar = QMenuBar(self)
         self.setMenuBar(self.menu_bar)
@@ -144,9 +143,19 @@ class MainWindow(QMainWindow):
                 config_error.setWindowTitle("Неправильный файл конфигурации")
                 config_error.setText("Файл конфигурации не может быть загружен, так как был изменен вручную.")
                 config_error.setIcon(QMessageBox.Icon.Critical)
-                config_error.setWindowIcon(QIcon(logo))
-                button = config_error.exec()
+                config_error.setWindowIcon(QIcon(LOGO))
+                config_error.exec()
 
+        if IS_FIRST_START:
+            first_start_msg = QMessageBox(self)
+            first_start_msg.setWindowTitle("Первый запуск")
+            first_start_msg.setText("Здравствуйте! Вы запустили NoStaticIP впервые.\nДля использования программы заполните ваши данные в окне \"Настройки\", а также ознакомьтесь с руководством пользователя.")
+            first_start_msg.setIcon(QMessageBox.Icon.Information)
+            first_start_msg.setWindowIcon(QIcon(LOGO))
+            first_start_msg.exec()
+            file = open(FIRST_START_DIR, "w")
+            file.write("")
+            file.close()
     def handle_error(self, error):
         if error == 1:
             title = "Ошибка аунтефикации"
@@ -167,7 +176,7 @@ class MainWindow(QMainWindow):
         error.setWindowTitle(title)
         error.setText(text)
         error.setIcon(QMessageBox.Icon.Critical)
-        error.setWindowIcon(QIcon(logo))
+        error.setWindowIcon(QIcon(LOGO))
         error.exec()
 
         self.start.setText("Начать")
@@ -186,16 +195,16 @@ class MainWindow(QMainWindow):
         if not cycle:
             if smtp_server is not None or email is not None or password is not None:
                 self.start.setText("Остановить")
-                self.start.setStyleSheet('QPushButton {background-color: #cc0a0a; color: white;} QPushButton:hover {color: black;}')
+                self.start.setStyleSheet('QPushButton {background-color: #d60b0b; color: white;} QPushButton:hover {color: black;}')
                 self.start.repaint()
                 self.cycle_thread.start()
                 cycle = True
             else:
                 error = QMessageBox(self)
                 error.setWindowTitle("Ошибка запуска")
-                error.setText("Запуск невозможен из-за отсутствия данных!")
+                error.setText("Запуск невозможен из-за отсутствия данных!\nПожалуйста, заполните ваши данные в окне \"Настройки\".")
                 error.setIcon(QMessageBox.Icon.Critical)
-                error.setWindowIcon(QIcon(logo))
+                error.setWindowIcon(QIcon(LOGO))
                 error.exec()
         elif cycle:
             self.start.setText("Начать")
@@ -229,48 +238,59 @@ class MainWindow(QMainWindow):
             self.send_ip_button.setText("Отправить IP")
             self.send_ip_button.repaint()
         else:
-            try:
-                send_mail(ip_to_send, smtp_server, int(port), email, password)
-                last_sent_ip = ip_to_send
-                self.current_ip_label.setText(f"Ваш IP сейчас:\n{ip_to_send}")
-                self.last_sent_ip.setText(f"Последний отправленный IP:\n{last_sent_ip}")
-                create_save_file(last_sent_ip, email, smtp_server)
-            except smtplib.SMTPAuthenticationError:
+            if smtp_server is not None or email is not None or password is not None:
+                try:
+                    send_mail(ip_to_send, smtp_server, int(port), email, password)
+                    last_sent_ip = ip_to_send
+                    self.current_ip_label.setText(f"Ваш IP сейчас:\n{ip_to_send}")
+                    self.last_sent_ip.setText(f"Последний отправленный IP:\n{last_sent_ip}")
+                    create_save_file(last_sent_ip, email, smtp_server)
+                except smtplib.SMTPAuthenticationError:
+                    error = QMessageBox(self)
+                    error.setWindowTitle("Ошибка аунтефикации")
+                    error.setText("Неверный логин или пароль!")
+                    error.setIcon(QMessageBox.Icon.Critical)
+                    error.setWindowIcon(QIcon(LOGO))
+                    error.exec()
+                except gaierror:
+                    error = QMessageBox(self)
+                    error.setWindowTitle("Ошибка сервера")
+                    error.setText("Невозможно подключиться к SMTP-серверу!")
+                    error.setIcon(QMessageBox.Icon.Critical)
+                    error.setWindowIcon(QIcon(LOGO))
+                    error.exec()
+                except SSLError:
+                    error = QMessageBox(self)
+                    error.setWindowTitle("Ошибка порта")
+                    error.setText("Выбран неверный порт SMTP-сервера!")
+                    error.setIcon(QMessageBox.Icon.Critical)
+                    error.setWindowIcon(QIcon(LOGO))
+                    error.exec()
+                except TimeoutError:
+                    error = QMessageBox(self)
+                    error.setWindowTitle("Ошибка подключения")
+                    error.setText("Истекло время подключения!")
+                    error.setIcon(QMessageBox.Icon.Critical)
+                    error.setWindowIcon(QIcon(LOGO))
+                    error.exec()
+                except Exception as e:
+                    error = QMessageBox(self)
+                    error.setWindowTitle("Ошибка")
+                    error.setText(f"Непредвиденная ошибка: {e}")
+                    error.setIcon(QMessageBox.Icon.Critical)
+                    error.setWindowIcon(QIcon(LOGO))
+                    error.exec()
+                finally:
+                    self.send_ip_button.setEnabled(True)
+                    self.send_ip_button.setText("Отправить IP")
+                    self.send_ip_button.repaint()
+            else:
                 error = QMessageBox(self)
-                error.setWindowTitle("Ошибка аунтефикации")
-                error.setText("Неверный логин или пароль!")
+                error.setWindowTitle("Ошибка отправки")
+                error.setText("Отправка невозможна из-за отсутствия данных!\nПожалуйста, заполните ваши данные в окне \"Настройки\".")
                 error.setIcon(QMessageBox.Icon.Critical)
-                error.setWindowIcon(QIcon(logo))
+                error.setWindowIcon(QIcon(LOGO))
                 error.exec()
-            except gaierror:
-                error = QMessageBox(self)
-                error.setWindowTitle("Ошибка сервера")
-                error.setText("Невозможно подключиться к SMTP-серверу!")
-                error.setIcon(QMessageBox.Icon.Critical)
-                error.setWindowIcon(QIcon(logo))
-                error.exec()
-            except SSLError:
-                error = QMessageBox(self)
-                error.setWindowTitle("Ошибка порта")
-                error.setText("Выбран неверный порт SMTP-сервера!")
-                error.setIcon(QMessageBox.Icon.Critical)
-                error.setWindowIcon(QIcon(logo))
-                error.exec()
-            except TimeoutError:
-                error = QMessageBox(self)
-                error.setWindowTitle("Ошибка подключения")
-                error.setText("Истекло время подключения!")
-                error.setIcon(QMessageBox.Icon.Critical)
-                error.setWindowIcon(QIcon(logo))
-                error.exec()
-            except:
-                error = QMessageBox(self)
-                error.setWindowTitle("Ошибка")
-                error.setText("Непредвиденная ошибка!")
-                error.setIcon(QMessageBox.Icon.Critical)
-                error.setWindowIcon(QIcon(logo))
-                error.exec()
-            finally:
                 self.send_ip_button.setEnabled(True)
                 self.send_ip_button.setText("Отправить IP")
                 self.send_ip_button.repaint()
@@ -292,7 +312,7 @@ class SettingsWindow(QWidget):
         self.setWindowTitle("Настройки")
         self.setMinimumSize(400, 260)
         self.setMaximumSize(500, 350)
-        self.setWindowIcon(QIcon(logo))
+        self.setWindowIcon(QIcon(LOGO))
         grid = QGridLayout()
         buttons_layout = QHBoxLayout()
         global_layout = QVBoxLayout()
@@ -361,7 +381,7 @@ class SettingsWindow(QWidget):
 
         self.delete_button = QPushButton("Удалить")
         self.delete_button.clicked.connect(self.delete)
-        self.delete_button.setStyleSheet('QPushButton {background-color: #cc0a0a; color: white;} QPushButton:hover {color: black;}')
+        self.delete_button.setStyleSheet('QPushButton {background-color: #d60b0b; color: white;} QPushButton:hover {color: black;}')
         self.delete_button.setMinimumHeight(30)
 
         buttons_layout.addWidget(self.delete_button)
@@ -392,9 +412,9 @@ class SettingsWindow(QWidget):
     def save(self):
         global smtp_server, port, email, password, frequency, method, server_ip, time, TIMES
 
-        email_s = self.email_line.text()
-        password_s = self.password_line.text()
-        smtp_server_s = self.smtp_server_line.text()
+        email_s = self.email_line.text().strip()
+        password_s = self.password_line.text().strip()
+        smtp_server_s = self.smtp_server_line.text().strip()
         port_s = self.port_chose.currentText()
         frequency_s = self.check_frequency.currentIndex()
         method_s = self.check_method.currentIndex()
@@ -405,15 +425,15 @@ class SettingsWindow(QWidget):
             email_broken.setWindowTitle("Ошибка сохранения")
             email_broken.setText("Введенный email недействителен!")
             email_broken.setIcon(QMessageBox.Icon.Critical)
-            email_broken.setWindowIcon(QIcon(logo))
+            email_broken.setWindowIcon(QIcon(LOGO))
             button = email_broken.exec()
         
-        elif (password_s is None) or (password_s == "") or (" " in password_s):
+        elif (password_s is None) or (password_s == "") or (password_s == " "):
             password_broken = QMessageBox(self)
             password_broken.setWindowTitle("Ошибка записи")
             password_broken.setText("Введенный пароль недействителен!")
             password_broken.setIcon(QMessageBox.Icon.Critical)
-            password_broken.setWindowIcon(QIcon(logo))
+            password_broken.setWindowIcon(QIcon(LOGO))
             button = password_broken.exec()
 
         elif (smtp_server_s is None) or (smtp_server_s == "") or (" " in smtp_server_s):
@@ -421,7 +441,7 @@ class SettingsWindow(QWidget):
             smtp_broken.setWindowTitle("Ошибка записи")
             smtp_broken.setText("Введенный smtp-сервер недействителен!")
             smtp_broken.setIcon(QMessageBox.Icon.Critical)
-            smtp_broken.setWindowIcon(QIcon(logo))
+            smtp_broken.setWindowIcon(QIcon(LOGO))
             button = smtp_broken.exec()
 
         else:
@@ -439,7 +459,7 @@ class SettingsWindow(QWidget):
             save_dialog.setText("Изменения сохранены")
             save_dialog.setStandardButtons(QMessageBox.StandardButton.Ok)
             save_dialog.setIcon(QMessageBox.Icon.Information)
-            save_dialog.setWindowIcon(QIcon(logo))
+            save_dialog.setWindowIcon(QIcon(LOGO))
             button = save_dialog.exec()
             if button == QMessageBox.StandardButton.Ok:
                 pass
@@ -453,7 +473,7 @@ class SettingsWindow(QWidget):
         question.setText("Данное действие уничтожит ваши настройки.\nВы уверены, что хотите продолжить?")
         question.setIcon(QMessageBox.Icon.Warning)
         question.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-        question.setWindowIcon(QIcon(logo))
+        question.setWindowIcon(QIcon(LOGO))
         answer = question.exec()
         if answer == QMessageBox.StandardButton.Yes:
             self.smtp_server_line.setText(None)
@@ -464,13 +484,13 @@ class SettingsWindow(QWidget):
             self.check_frequency.setCurrentIndex(1)
             self.check_method.setCurrentIndex(0)
             self.ip_server.setCurrentIndex(0)
-            if path.exists("config.ini"):
-                remove("config.ini")
+            with open(CONFIG_FILE, "w") as f:
+                f.write("")
             result = QMessageBox()
             result.setWindowTitle("Удаление конфигурации")
             result.setText("Ваша конфигурация удалена.")
             result.setIcon(QMessageBox.Icon.Information)
-            result.setWindowIcon(QIcon(logo))
+            result.setWindowIcon(QIcon(LOGO))
             result.exec()
         else:
             pass
@@ -494,18 +514,15 @@ class SettingsWindow(QWidget):
 
 class InfoWindow(QWidget):
     def __init__(self):
+        global VERSION, BUILD
         super().__init__()
         self.setWindowTitle("Информация")
-        self.setWindowIcon(QIcon(logo))
+        self.setWindowIcon(QIcon(LOGO))
         self.special = ""
         info_layout = QVBoxLayout()
-        self.info = QLabel("Информация о программе\n\nNoStaticIP\nВерсия: 1.0.0\nНомер сборки: 0001\n\n\u00a9Максим Легкий\n2025\n")
-        # self.special_label = QLabel("Программа собрана специально для Татьяны Викторовны")
-        # self.special_label.setStyleSheet('color: red;')
+        self.info = QLabel(f"Информация о программе\n\nNoStaticIP\nВерсия: {VERSION}\nНомер сборки: {BUILD}\n\n\u00a9Максим Легкий\n2025\n")
         self.info.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        # self.special_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         info_layout.addWidget(self.info)
-        # info_layout.addWidget(self.special_label)
         self.setLayout(info_layout)
         self.setFixedSize(350, 200)
 
@@ -517,8 +534,7 @@ class InfoWindow(QWidget):
         elif event.button() == Qt.MouseButton.MiddleButton:
             self.special += "M"
 
-        if self.special == "LLMRL":
-            # self.special_label.hide()
+        if self.special == "LLMRL": # an easter egg!
             self.info.setStyleSheet('color: red;')
             self.info.repaint()
             sleep(1)
@@ -531,9 +547,8 @@ class InfoWindow(QWidget):
             self.info.setStyleSheet('color: gold;')
             self.info.repaint()
             sleep(1)
-            self.info.setStyleSheet('color: black;')
+            self.info.setStyleSheet(None)
             self.info.repaint()
-            # self.setFixedSize(800, 500)
 
 
 window = MainWindow(last_sent_ip)
