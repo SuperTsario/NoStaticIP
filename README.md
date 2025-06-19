@@ -4,8 +4,8 @@
 ![Static Badge](https://img.shields.io/badge/SuperTsario-NoStaticIP-%23d60b0b)
 ![GitHub top language](https://img.shields.io/github/languages/top/SuperTsario/NoStaticIP)
 ![GitHub](https://img.shields.io/github/license/SuperTsario/NoStaticIP)
-![GitHub Repo stars](https://img.shields.io/github/stars/SuperTsario/NoStaticIP)
 ![GitHub issues](https://img.shields.io/github/issues/SuperTsario/NoStaticIP)
+![GitHub Repo stars](https://img.shields.io/github/stars/SuperTsario/NoStaticIP)
 
 ## Описание
 NoStaticIP делает возможным использование RDP без статичного IP путем отправки вашего текущего IP-адреса на электронную почту. Программа проверяет с определенной частотой ваш IP-адрес с помощью одного из доступных методов (через stun или с определенного http-сервера), и в случае его изменения отправляет его на ваш адрес электронной почты по протоколу SMTP. NoStaticIP полностью бесплатна и может быть использована любым человеком.
